@@ -8,5 +8,3 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   bd: 'BD',
   livre: 'Livre',
 }
-
-export const STORAGE_KEY = 'bucket-list-entries'

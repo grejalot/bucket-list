@@ -7,54 +7,124 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { loadEntries, saveEntries } from '../storage'
+import * as entriesApi from '../api/entries'
 import type { Entry } from '../types'
 
 interface EntriesContextValue {
   entries: Entry[]
-  addEntry: (entry: Omit<Entry, 'id' | 'addedAt' | 'discovered'>) => void
-  updateEntry: (id: string, patch: Partial<Pick<Entry, 'discovered' | 'rating'>>) => void
-  removeEntry: (id: string) => void
+  loading: boolean
+  error: string | null
+  addEntry: (entry: Omit<Entry, 'id' | 'addedAt' | 'discovered'>) => Promise<void>
+  updateEntry: (
+    id: string,
+    patch: Partial<Pick<Entry, 'discovered' | 'rating'>>,
+  ) => Promise<void>
+  removeEntry: (id: string) => Promise<void>
+  refreshEntries: () => Promise<void>
 }
 
 const EntriesContext = createContext<EntriesContextValue | null>(null)
 
 export function EntriesProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useState<Entry[]>(() => loadEntries())
+  const [entries, setEntries] = useState<Entry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refreshEntries = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await entriesApi.fetchEntries()
+      setEntries(data)
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Impossible de charger les entrées',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    saveEntries(entries)
-  }, [entries])
+    refreshEntries()
+  }, [refreshEntries])
 
   const addEntry = useCallback(
-    (data: Omit<Entry, 'id' | 'addedAt' | 'discovered'>) => {
-      const entry: Entry = {
-        ...data,
-        id: crypto.randomUUID(),
-        discovered: false,
-        addedAt: new Date().toISOString(),
+    async (data: Omit<Entry, 'id' | 'addedAt' | 'discovered'>) => {
+      setError(null)
+      try {
+        const entry = await entriesApi.createEntry({
+          title: data.title,
+          category: data.category,
+        })
+        setEntries((prev) => [entry, ...prev])
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Impossible d'ajouter l'entrée",
+        )
+        throw err
       }
-      setEntries((prev) => [entry, ...prev])
     },
     [],
   )
 
   const updateEntry = useCallback(
-    (id: string, patch: Partial<Pick<Entry, 'discovered' | 'rating'>>) => {
+    async (
+      id: string,
+      patch: Partial<Pick<Entry, 'discovered' | 'rating'>>,
+    ) => {
+      setError(null)
+      const previous = entries
       setEntries((prev) =>
         prev.map((e) => (e.id === id ? { ...e, ...patch } : e)),
       )
+
+      try {
+        const updated = await entriesApi.updateEntry(id, patch)
+        setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)))
+      } catch (err) {
+        setEntries(previous)
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Impossible de modifier l'entrée",
+        )
+      }
     },
-    [],
+    [entries],
   )
 
-  const removeEntry = useCallback((id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id))
-  }, [])
+  const removeEntry = useCallback(
+    async (id: string) => {
+      setError(null)
+      const previous = entries
+      setEntries((prev) => prev.filter((e) => e.id !== id))
+
+      try {
+        await entriesApi.deleteEntry(id)
+      } catch (err) {
+        setEntries(previous)
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Impossible de supprimer l'entrée",
+        )
+      }
+    },
+    [entries],
+  )
 
   const value = useMemo(
-    () => ({ entries, addEntry, updateEntry, removeEntry }),
-    [entries, addEntry, updateEntry, removeEntry],
+    () => ({
+      entries,
+      loading,
+      error,
+      addEntry,
+      updateEntry,
+      removeEntry,
+      refreshEntries,
+    }),
+    [entries, loading, error, addEntry, updateEntry, removeEntry, refreshEntries],
   )
 
   return (

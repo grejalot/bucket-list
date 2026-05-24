@@ -6,18 +6,26 @@ import { useEntries } from '../context/EntriesContext'
 import { CATEGORIES, type Category } from '../types'
 
 export function HomePage() {
-  const { addEntry } = useEntries()
+  const { addEntry, error } = useEntries()
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState<Category>('film')
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const trimmed = title.trim()
-    if (!trimmed) return
-    addEntry({ title: trimmed, category })
-    setTitle('')
-    navigate('/liste')
+    if (!trimmed || submitting) return
+    setSubmitting(true)
+    try {
+      await addEntry({ title: trimmed, category })
+      setTitle('')
+      navigate('/liste')
+    } catch {
+      // error handled in context
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -63,11 +71,18 @@ export function HomePage() {
           </select>
         </label>
 
+        {error && (
+          <p className="mt-4 text-sm text-red-500" role="alert">
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
-          className="gradient-accent mt-8 w-full rounded-xl py-3.5 text-sm font-medium text-white shadow-[0_4px_14px_rgba(124,58,237,0.35)] transition hover:opacity-95 active:scale-[0.99]"
+          disabled={submitting}
+          className="gradient-accent mt-8 w-full rounded-xl py-3.5 text-sm font-medium text-white shadow-[0_4px_14px_rgba(124,58,237,0.35)] transition hover:opacity-95 active:scale-[0.99] disabled:opacity-60"
         >
-          Ajouter
+          {submitting ? 'Ajout…' : 'Ajouter'}
         </button>
       </form>
 

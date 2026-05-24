@@ -14,7 +14,7 @@ function formatDate(iso: string) {
 }
 
 export function ListPage() {
-  const { entries, updateEntry, removeEntry } = useEntries()
+  const { entries, loading, error, updateEntry, removeEntry } = useEntries()
   const [filter, setFilter] = useState<Category | 'all'>('all')
   const [hideDiscovered, setHideDiscovered] = useState(false)
 
@@ -60,7 +60,17 @@ export function ListPage() {
         </label>
       </div>
 
-      {filtered.length === 0 ? (
+      {error && (
+        <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+
+      {loading ? (
+        <p className="rounded-2xl bg-white px-6 py-12 text-center text-sm text-gray-400 shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
+          Chargement…
+        </p>
+      ) : filtered.length === 0 ? (
         <p className="rounded-2xl bg-white px-6 py-12 text-center text-sm text-gray-400 shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
           {entries.length === 0
             ? 'Aucune entrée pour l’instant.'
