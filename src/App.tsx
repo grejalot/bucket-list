@@ -6,7 +6,7 @@ import { ListPage } from './pages/ListPage'
 export default function App() {
   return (
     <EntriesProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/liste" element={<ListPage />} />

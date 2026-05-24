@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirection…</title>
+    <script>
+      ;(function () {
+        var base = '/bucket-list/'
+        var path = window.location.pathname
+        if (path.indexOf(base) === 0) {
+          path = path.slice(base.length)
+        } else if (path.indexOf('/bucket-list') === 0) {
+          path = path.slice('/bucket-list'.length).replace(/^\//, '')
+        }
+        var target = (path || '') + window.location.search + window.location.hash
+        if (target && target !== '/') {
+          sessionStorage.setItem('bucket-list-redirect', target)
+        }
+        window.location.replace(base)
+      })()
+    </script>
+  </head>
+  <body></body>
+</html>
